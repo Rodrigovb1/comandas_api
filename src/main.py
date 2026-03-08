@@ -5,8 +5,7 @@ from settings import HOST, PORT, RELOAD
 import uvicorn
 
 # import das classes com as rotas/endpoints
-from routers import FuncionarioRouter, ProdutoRouter
-from routers import ClienteRouter
+from routers import FuncionarioRouter, ProdutoRouter, ClienteRouter
 
 app = FastAPI()
 
