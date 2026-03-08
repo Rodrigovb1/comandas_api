@@ -1,0 +1,32 @@
+# Aluno: Rodrigo Vaisam Bastos
+
+### Verbo GET – listar todos
+GET http://localhost:8000/produto/ HTTP/1.1
+
+### Verbo GET – listar um
+GET http://localhost:8000/produto/10 HTTP/1.1
+
+### Verbo POST – adicionar
+POST http://127.0.0.1:8000/produto/ HTTP/1.1
+Content-Type: application/json
+
+{
+    "nome": "Blusa",
+    "descricao": "Lã: 90%, Poliéster: 10%",
+    "foto": "bytes",
+    "valor_unitario": 19.99
+}
+
+### Verbo PUT – atualiza
+PUT http://127.0.0.1:8000/produto/2 HTTP/1.1
+Content-Type: application/json
+
+{
+    "nome": "Protetor Solar",
+    "descricao": "Nova fórmula com FPS 50",
+    "foto": "bytes",
+    "valor_unitario": 29.99
+}
+
+### Verbo DELETE - excluir
+DELETE http://127.0.0.1:8000/produto/3 HTTP/1.1
