@@ -7,25 +7,29 @@ GET http://localhost:8000/funcionario/ HTTP/1.1
 GET http://localhost:8000/funcionario/10 HTTP/1.1
 
 ### Verbo POST – adicionar nome do aluno
-POST http://127.0.0.1:8000/funcionario/5 HTTP/1.1
+POST http://127.0.0.1:8000/funcionario/ HTTP/1.1
 Content-Type: application/json
 
 {
-    "nome": "Rodrigo Vaisam Bastos",
+    "nome": "Rodrigo Vaisam Bastos com senha cifrada",
     "matricula": "12345",
     "cpf": "123.456.789-00",
     "telefone": "11987654321",
     "grupo": 1,
-    "senha": "senha123"
+    "senha": "senha1234"
 }
 
+# Para facilitar os testes, sugiro que seja utilizado CPF intuitivo,
+# e que sejam criados funcionários nos diferentes grupos:
+# • Grupo 1 – Admin
+# • Grupo 2 – Atendimento Balcão
+# • Grupo 3 – Atendimento Caixa
+
 ### Verbo PUT – atualiza o anterior criado
-PUT http://127.0.0.1:8000/funcionario/5 HTTP/1.1
+PUT http://127.0.0.1:8000/funcionario/1 HTTP/1.1
 Content-Type: application/json
 
 {
-    "nome": "Digo",
-    "grupo": 3,
     "senha": "novaSenha456"
 }
 
@@ -46,4 +50,4 @@ Content-Type: application/json
 DELETE http://127.0.0.1:8000/funcionario/3 HTTP/1.1
 
 ### Verbo DELETE - excluir o editado/criado
-DELETE http://127.0.0.1:8000/funcionario/5 HTTP/1.1
+DELETE http://127.0.0.1:8000/funcionario/1 HTTP/1.1

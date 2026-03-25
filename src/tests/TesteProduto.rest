@@ -29,7 +29,7 @@ Content-Type: application/json
 }
 
 ### Verbo PUT – atualiza anterior
-PUT http://127.0.0.1:8000/produto/4 HTTP/1.1
+PUT http://127.0.0.1:8000/produto/2 HTTP/1.1
 Content-Type: application/json
 
 {
@@ -54,4 +54,4 @@ Content-Type: application/json
 DELETE http://127.0.0.1:8000/produto/3 HTTP/1.1
 
 ### Verbo DELETE - exclui o editado/criado
-DELETE http://127.0.0.1:8000/produto/4 HTTP/1.1
+DELETE http://127.0.0.1:8000/produto/2 HTTP/1.1
