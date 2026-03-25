@@ -12,9 +12,10 @@ from domain.schemas.FuncionarioSchema import (
     FuncionarioResponse
 )
 
-# Infra ORM
+# Infra ORM, Database
 from infra.orm.FuncionarioModel import FuncionarioDB
 from infra.database import get_db
+from infra.security import get_password_hash
 
 # Ajustes nas rotas para inclusão dos comandas ORM
 router = APIRouter()
@@ -80,6 +81,9 @@ async def post_funcionario(funcionario_data: FuncionarioCreate, db: Session = De
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Já existe um funcionário com este CPF"
             )
+        
+        # Hash de senha
+        hashed_password = get_password_hash(funcionario_data.senha) # pegando a senha em texto puro (nos parênteses) e aplica a função de hash de senha, 
 
         # Cria o novo funcionário
         novo_funcionario = FuncionarioDB(
@@ -89,8 +93,9 @@ async def post_funcionario(funcionario_data: FuncionarioCreate, db: Session = De
             cpf=funcionario_data.cpf,
             telefone=funcionario_data.telefone,
             grupo=funcionario_data.grupo,
-            senha=funcionario_data.senha
+            senha=hashed_password
         )
+        # foi alterado o senha, que antes tava como funcionario_data.senha, ou seja, pegava a senha em texto puro.
 
         db.add(novo_funcionario)
         db.commit()
@@ -133,7 +138,20 @@ async def put_funcionario(id: int, funcionario_data: FuncionarioUpdate, db: Sess
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Já existe um funcionário com este CPF"
                 )
+            
+        # Hash de senha, caso a senha for alterada
+        if funcionario_data.senha:
+            funcionario_data.senha = get_password_hash(funcionario_data.senha)
+        # Os if de python usam um conceito chamado Truthy e Falsy, ou seja, eles avaliam o valor da variável como verdadeiro ou falso.
+        # Falsy: None, False, 0, 0.0, '', [], {}, set()
+        # Truthy: Qualquer coisa que contenha algum dado. Exemplos: "senha123", 1, [1, 2], True.
         
+        # Nesse caso, se a senha for fornecida (Não None, não vazia) o if será executado.
+        # Se a senha não for fornecida, o if é ignorado, e a senha do funcionário permanecerá inalterada.
+
+        # Isso permite que o endpoint de atualização funcione tanto para atualizações parciais (onde apenas alguns campos são fornecidos)
+        # quanto para atualizações completas (onde todos os campos são fornecidos).
+
         # Atualiza apenas os campos fornecidos
         update_data = funcionario_data.model_dump(exclude_unset=True)
 
