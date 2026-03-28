@@ -11,11 +11,13 @@ from domain.schemas.FuncionarioSchema import (
     FuncionarioUpdate,
     FuncionarioResponse
 )
+from domain.schemas.AuthSchema import FuncionarioAuth
 
 # Infra ORM, Database
 from infra.orm.FuncionarioModel import FuncionarioDB
 from infra.database import get_db
 from infra.security import get_password_hash
+from infra.dependencies import get_current_active_user, require_group
 
 # Ajustes nas rotas para inclusão dos comandas ORM
 router = APIRouter()
@@ -27,7 +29,10 @@ router = APIRouter()
 #     return {"msg": "funcionario get todos executado"}
 
 @router.get("/funcionario/", response_model=List[FuncionarioResponse], tags=["Funcionário"], status_code=status.HTTP_200_OK)
-async def get_funcionarios(db: Session = Depends(get_db)):
+async def get_funcionarios(
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1]))
+    ):
     """Retorna todos os funcionários"""
     try:
         funcionarios = db.query(FuncionarioDB).all()
@@ -43,7 +48,11 @@ async def get_funcionarios(db: Session = Depends(get_db)):
 #     return {"msg": "funcionario get um executado"}
 
 @router.get("/funcionario/{id}", response_model=FuncionarioResponse, tags=["Funcionário"], status_code=status.HTTP_200_OK)
-async def get_funcionario(id: int, db: Session = Depends(get_db)):
+async def get_funcionario(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(get_current_active_user)
+    ):
     """Retorna um funcionário específico"""
     try:
         funcionario = db.query(FuncionarioDB).filter(FuncionarioDB.id == id).first()
@@ -70,7 +79,11 @@ async def get_funcionario(id: int, db: Session = Depends(get_db)):
 # • Conforme já vimos anteriormente, a entrada dos dados será realizada através de um JSON enviado no corpo da requisição,
 # sendo passada para dentro da nossa classe através da classe FuncionarioCreate, herdando de BaseModel.
 @router.post("/funcionario/", response_model=FuncionarioResponse, tags=["Funcionário"], status_code=status.HTTP_201_CREATED)
-async def post_funcionario(funcionario_data: FuncionarioCreate, db: Session = Depends(get_db)):
+async def post_funcionario(
+    funcionario_data: FuncionarioCreate,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1]))
+    ):
     """Cria um novo funcionário"""
     try:
         # verifica se já existe um funcionário com este CPF
@@ -118,7 +131,11 @@ async def post_funcionario(funcionario_data: FuncionarioCreate, db: Session = De
 
 # Mesma coisa do post, a diferença aqui é que tem que especificar o id.
 @router.put("/funcionario/{id}", response_model=FuncionarioResponse, tags=["Funcionário"], status_code=status.HTTP_200_OK)
-async def put_funcionario(id: int, funcionario_data: FuncionarioUpdate, db: Session = Depends(get_db)):
+async def put_funcionario(
+    id: int, funcionario_data: FuncionarioUpdate,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1]))
+    ):
     """Atualiza um funcionário existente"""
     try:
         funcionario = db.query(FuncionarioDB).filter(FuncionarioDB.id == id).first()
@@ -177,7 +194,11 @@ async def put_funcionario(id: int, funcionario_data: FuncionarioUpdate, db: Sess
 #     return {"msg": "funcionario delete executado", "id":id}
 
 @router.delete("/funcionario/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Funcionário"], summary="Remover funcionário")
-async def delete_funcionario(id: int, db: Session = Depends(get_db)):
+async def delete_funcionario(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1]))
+    ):
     """Exclui um funcionário existente"""
     try:
         funcionario = db.query(FuncionarioDB).filter(FuncionarioDB.id == id).first()

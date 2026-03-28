@@ -1,13 +1,18 @@
 # Aluno: Rodrigo Vaisam Bastos
 
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzQ3MjYwNDYsInR5cGUiOiJhY2Nlc3MifQ.VNUr7vgosrll9c3paBDJslFL-pwEu1eQUzmeQ4QH_N8
+
 ### Verbo GET – listar todos
 GET http://localhost:8000/cliente/ HTTP/1.1
+Authorization: Bearer {{access_token}}
 
 ### Verbo GET – listar um
 GET http://localhost:8000/cliente/2 HTTP/1.1
+Authorization: Bearer {{access_token}}
 
 ### Verbo POST – adiciona outro
 POST http://127.0.0.1:8000/cliente/ HTTP/1.1
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -16,8 +21,9 @@ Content-Type: application/json
     "telefone": "12345678901"
 }
 
-### Verbo POST – adicionar nome do aluno
+### Verbo POST – adicionar cliente com nome do aluno
 POST http://127.0.0.1:8000/cliente/ HTTP/1.1
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -28,6 +34,7 @@ Content-Type: application/json
 
 ### Verbo PUT – atualiza o anterior criado
 PUT http://127.0.0.1:8000/cliente/2 HTTP/1.1
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -36,6 +43,7 @@ Content-Type: application/json
 
 ### Verbo PUT – atualiza outro qualquer
 PUT http://127.0.0.1:8000/cliente/2 HTTP/1.1
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -46,6 +54,8 @@ Content-Type: application/json
 
 ### Verbo DELETE - excluir outro qualquer
 DELETE http://127.0.0.1:8000/cliente/3 HTTP/1.1
+Authorization: Bearer {{access_token}}
 
 ### Verbo DELETE - excluir o editado/criado
 DELETE http://127.0.0.1:8000/cliente/2 HTTP/1.1
+Authorization: Bearer {{access_token}}

@@ -6,23 +6,36 @@ from typing import List
 # Import das classes relacionadas com aos schemas e persistência dos dados
 
 # Domain Schemas
-from domain.schemas.ProdutoSchema import ProdutoCreate, ProdutoUpdate, ProdutoResponse # Comit: Trocado nome, pois foi alterado pra schemas
+from domain.schemas.AuthSchema import FuncionarioAuth
+from domain.schemas.ProdutoSchema import ProdutoCreate, ProdutoPublicoResponse, ProdutoUpdate, ProdutoResponse # Comit: Trocado nome, pois foi alterado pra schemas
 
 # Infra ORM
-from infra.orm.FuncionarioModel import FuncionarioDB
 from infra.orm.ProdutoModel import ProdutoDB
 from infra.database import get_db
+from infra.dependencies import get_current_active_user, require_group
 
 router = APIRouter()
 
 # Criar as rotas/endpoints: GET, POST, PUT, DELETE
 
-# @router.get("/produto/", tags=["Produto"], status_code=200)
-# async def get_produto():
-#     return {"msg": "produto get todos executado"}
-
+@router.get("/produto/publico", response_model=List[ProdutoPublicoResponse], tags=["Produto"], status_code=status.HTTP_200_OK)
+async def get_produtos_publicos(
+    db: Session = Depends(get_db)):
+    """Retorna todos os produtos públicos, sem necessidade de autenticação"""
+    try:
+        produtos = db.query(ProdutoDB).all()
+        return produtos
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao buscar produtos: {str(e)}"
+        )
+    
 @router.get("/produto/", response_model=List[ProdutoResponse], tags=["Produto"], status_code=status.HTTP_200_OK)
-async def get_produtos(db: Session = Depends(get_db)):
+async def get_produtos(
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(get_current_active_user)
+):
     """Retorna todos os produtos"""
     try:
         produtos = db.query(ProdutoDB).all()
@@ -33,12 +46,12 @@ async def get_produtos(db: Session = Depends(get_db)):
             detail=f"Erro ao buscar produtos: {str(e)}"
         )
 
-# @router.get("/produto/{id}", tags=["Produto"], status_code=200)
-# async def get_produto(id: int):
-#     return {"msg": "produto get um executado"}
-
 @router.get("/produto/{id}", response_model=ProdutoResponse, tags=["Produto"], status_code=status.HTTP_200_OK)
-async def get_produto(id: int, db: Session = Depends(get_db)):
+async def get_produto(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(get_current_active_user)
+):
     """Retorna um produto específico"""
     try:
         produto = db.query(ProdutoDB).filter(ProdutoDB.id == id).first()
@@ -62,7 +75,11 @@ async def get_produto(id: int, db: Session = Depends(get_db)):
 #     return {"msg": "produto post executado", "nome": corpo.nome, "descricao": corpo.descricao, "foto": corpo.foto, "valor_unitario": corpo.valor_unitario}
 
 @router.post("/produto/", response_model=ProdutoResponse, tags=["Produto"], status_code=status.HTTP_201_CREATED)
-async def post_produto(produto_data: ProdutoCreate, db: Session = Depends(get_db)):
+async def post_produto(
+    produto_data: ProdutoCreate,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1]))
+):
     """Cria um novo produto"""
     try:
         # verifica se já existe um produto com o mesmo nome, para evitar duplicidade
@@ -104,7 +121,12 @@ async def post_produto(produto_data: ProdutoCreate, db: Session = Depends(get_db
 #     return {"msg": "produto put executado", "nome": corpo.nome, "descricao": corpo.descricao, "foto": corpo.foto, "valor_unitario": corpo.valor_unitario}
 
 @router.put("/produto/{id}", response_model=ProdutoResponse, tags=["Produto"], status_code=status.HTTP_200_OK)
-async def put_produto(id: int, produto_data: ProdutoUpdate, db: Session = Depends(get_db)):
+async def put_produto(
+    id: int,
+    produto_data: ProdutoUpdate,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1]))
+):
     """Atualiza um produto existente"""
     try:
         produto = db.query(ProdutoDB).filter(ProdutoDB.id == id).first()
@@ -150,7 +172,11 @@ async def put_produto(id: int, produto_data: ProdutoUpdate, db: Session = Depend
 #     return {"msg": "produto delete executado", "id":id}
 
 @router.delete("/produto/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Produto"], summary="Remover produto")
-async def delete_produto(id: int, db: Session = Depends(get_db)):
+async def delete_produto(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1]))
+):
     """Exclui um produto existente"""
     try:
         produto = db.query(ProdutoDB).filter(ProdutoDB.id == id).first()
