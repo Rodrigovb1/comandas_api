@@ -6,6 +6,7 @@ import uvicorn
 
 # import das classes com as rotas/endpoints
 from routers import FuncionarioRouter, ProdutoRouter, ClienteRouter
+from routers import AuthRouter
 
 # lifespan - ciclo de vida da aplicação
 from infra import database
@@ -27,6 +28,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(FuncionarioRouter.router)
 app.include_router(ClienteRouter.router)
 app.include_router(ProdutoRouter.router)
+app.include_router(AuthRouter.router)
 
 # rota padrão para verificar se a API está rodando, e também para mostrar os links do Swagger UI e ReDoc
 @app.get("/", tags=["Root"], status_code=200)

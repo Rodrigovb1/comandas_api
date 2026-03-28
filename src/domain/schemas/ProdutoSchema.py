@@ -25,5 +25,13 @@ class ProdutoResponse(BaseModel):
     foto: Optional[bytes] = None
     valor_unitario: float
 
+# Criação de classe pública para resposta sem o id e valor, está sendo usada no endpoint público
+class ProdutoPublicoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    nome: str
+    descricao: str
+    foto: Optional[bytes] = None
+
 # Comit: importou ConfigDict e Optional, fez o model de resposta, e fez o Response.
 # Também tirei o id, pois o auto increment já cuida rs

@@ -8,23 +8,24 @@ from typing import List
 # Domain Schemas
 from domain.schemas.ClienteSchema import ClienteCreate, ClienteUpdate, ClienteResponse
 
-# Infra ORM
-from domain.schemas.FuncionarioSchema import FuncionarioResponse
+# Auth do funcionário para validar o acesso aos endpoints de cliente
+from domain.schemas.AuthSchema import FuncionarioAuth
+
+# Infra ORM, Database
 from infra.orm.ClienteModel import ClienteDB
 from infra.database import get_db
-from infra.orm.ProdutoModel import ProdutoDB
+from infra.dependencies import get_current_active_user, require_group
 
 router = APIRouter()
 
 # Criar as rotas/endpoints: GET, POST, PUT, DELETE
 
-# @router.get("/cliente/", tags=["Cliente"], status_code=200)
-# async def get_cliente(db: Session = Depends(get_db)):
-#     return {"msg": "cliente get todos executado"}
-
 # Novo get_cliente com ORM
 @router.get("/cliente/", response_model=List[ClienteResponse], tags=["Cliente"], status_code=status.HTTP_200_OK)
-async def get_clientes(db: Session = Depends(get_db)):
+async def get_clientes(
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(get_current_active_user)
+):
     """Retorna todos os clientes"""
     try:
         clientes = db.query(ClienteDB).all()
@@ -35,13 +36,13 @@ async def get_clientes(db: Session = Depends(get_db)):
             detail=f"Erro ao buscar clientes: {str(e)}"
         )
 
-# @router.get("/cliente/{id}", tags=["Cliente"], status_code=200)
-# async def get_cliente(id: int, db: Session = Depends(get_db)):
-#     return {"msg": "cliente get um executado"}
-
-# Novo get_cliente{id} com ORM
+# Novo get_cliente{id} com ORM, protegida
 @router.get("/cliente/{id}", response_model=ClienteResponse, tags=["Cliente"], status_code=status.HTTP_200_OK)
-async def get_cliente(id: int, db: Session = Depends(get_db)):
+async def get_cliente(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(get_current_active_user) # get_current_active_user -> protegida.
+    ):
     """Retorna um cliente específico"""
     try:
         cliente = db.query(ClienteDB).filter(ClienteDB.id == id).first()
@@ -57,13 +58,13 @@ async def get_cliente(id: int, db: Session = Depends(get_db)):
             detail=f"Erro ao buscar cliente: {str(e)}"
         )
 
-# @router.post("/cliente/", tags=["Cliente"], status_code=200)
-# async def post_cliente(corpo: ClienteCreate, db: Session = Depends(get_db)): # Recebe um objeto do tipo ClienteCreate no corpo da requisição
-#     return {"msg": "cliente post executado", "nome": corpo.nome, "cpf": corpo.cpf, "telefone": corpo.telefone}
-
 # Novo post_cliente com ORM
 @router.post("/cliente/", response_model=ClienteResponse, tags=["Cliente"], status_code=status.HTTP_201_CREATED)
-async def post_cliente(cliente_data: ClienteCreate, db: Session = Depends(get_db)):
+async def post_cliente(
+    cliente_data: ClienteCreate,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1, 3])) # Somente gerentes e caixa podem criar clientes.
+    ):
     """Cria um novo cliente"""
     try:
         # verifica se já existe um cliente com o mesmo CPF
@@ -97,13 +98,14 @@ async def post_cliente(cliente_data: ClienteCreate, db: Session = Depends(get_db
             detail=f"Erro ao criar cliente: {str(e)}"
         )
 
-# @router.put("/cliente/{id}", tags=["Cliente"], status_code=200)
-# async def put_cliente(id: int, corpo: ClienteUpdate, db: Session = Depends(get_db)):
-#     return {"msg": "cliente put executado", "nome": corpo.nome, "cpf": corpo.cpf, "telefone": corpo.telefone}
-
 # Novo put_cliente{id} com ORM
 @router.put("/cliente/{id}", response_model=ClienteResponse, tags=["Cliente"], status_code=status.HTTP_200_OK)
-async def put_cliente(id: int, cliente_data: ClienteUpdate, db: Session = Depends(get_db)):
+async def put_cliente(
+    id: int,
+    cliente_data: ClienteUpdate,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1, 3]))
+    ):
     """Atualiza um cliente existente"""
     try:
         cliente = db.query(ClienteDB).filter(ClienteDB.id == id).first()
@@ -154,7 +156,11 @@ async def put_cliente(id: int, cliente_data: ClienteUpdate, db: Session = Depend
 #     return {"msg": "cliente delete executado", "id":id}
 
 @router.delete("/cliente/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Cliente"], summary="Remover cliente")
-async def delete_cliente(id: int, db: Session = Depends(get_db)):
+async def delete_cliente(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1])) # Somente gerentes podem excluir clientes.
+):
     """Exclui um cliente existente"""
     try:
         cliente = db.query(ClienteDB).filter(ClienteDB.id == id).first()
