@@ -8,15 +8,17 @@ from infra.orm.FuncionarioModel import FuncionarioDB
 from infra.database import get_db
 from infra.security import verify_password, create_access_token, create_refresh_token, verify_refresh_token
 from infra.dependencies import get_current_active_user
+from infra.rate_limit import limiter, get_rate_limit
 
+from services.AuditoriaService import AuditoriaService
 from settings import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
 
 router = APIRouter()
-# ver oq é o APIRouter e onde ele tá
 
 # Router especializado em autenticação JWT com 4 endpoints principais
 @router.post("/auth/login", response_model=TokenResponse, tags=["Autenticação"], summary="Login de funcionário - pública - retorna access e refresh token")
-async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit(get_rate_limit("critical")) # Aplica o limite mais rigoroso (5 por minuto) para evitar força bruta
+async def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
     """
     Realiza login do funcionário e retorna access token e refresh token
 
@@ -56,6 +58,15 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
             },
         )
 
+        # Registrar auditoria de login
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=funcionario.id,
+            acao="LOGIN",
+            recurso="AUTH",
+            request=request
+        )
+
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
@@ -70,7 +81,8 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erro ao realizar login: {str(e)}")
 
 @router.post("/auth/refresh", response_model=TokenResponse, tags=["Autenticação"], summary="Refresh token - pública - renova access token usando refresh token")
-async def refresh_token(refresh_data: RefreshTokenRequest, db:Session = Depends(get_db)):
+@limiter.limit(get_rate_limit("critical")) # Limita a renovação do token
+async def refresh_token(request: Request, refresh_data: RefreshTokenRequest, db:Session = Depends(get_db)):
     """
     Renova o access token usando um refresh token válido
 

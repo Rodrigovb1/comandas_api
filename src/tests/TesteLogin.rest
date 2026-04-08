@@ -1,30 +1,37 @@
 ### Login para obter access e refresh tokens
+# POST http://127.0.0.1:8000/auth/login HTTP/1.1
+# content-type: application/json
+
+# {
+#     "cpf" : "1",
+#     "senha" : "abcBolinhas"
+# }
+
 POST http://127.0.0.1:8000/auth/login HTTP/1.1
 content-type: application/json
 
 {
-"cpf" : "123.456.789-01",
-"senha" : "senha123"
+    "cpf" : "2",
+    "senha" : "22"
 }
 
 ### token gerado
-@access_token_admin = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzQ3MjQ4MTYsInR5cGUiOiJhY2Nlc3MifQ.8KrFkeocxm7VZ5F6Rb7QsdDfx-vW2einBMXh49QlyII
-@refresh_token_admin = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzUzMjg3MTYsInR5cGUiOiJyZWZyZXNoIn0.VJSebOcx_3CNUHcHqz6K06U_rpwBigQRSMCt4X0nmJ0
+@access_token_admin = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzU2NTM4ODgsInR5cGUiOiJhY2Nlc3MifQ.h17J2yp-PuDR-rWwYSYoXqiet7BK_gWfVCKW8R-UGj0
+@refresh_token_admin = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzYyNTc3ODgsInR5cGUiOiJyZWZyZXNoIn0.rkQZj2Ym4dUfTQ31fmDidjpbZfeJPxDMcfV1WZBkjuk
 
-@access_token_gp2 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMuNDU2Ljc4OS0wMSIsImlkIjozLCJncnVwbyI6MiwiZXhwIjoxNzc0NzI2NzUwLCJ0eXBlIjoiYWNjZXNzIn0.f5Rjg_YlOf3ZjKy-9fADOC9x0au9pVcz4NLX_Z2fpCw
+@access_token_LoginAuditoria = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwiaWQiOjIsImdydXBvIjoyLCJleHAiOjE3NzU2NTM3ODMsInR5cGUiOiJhY2Nlc3MifQ.XFux4A8PZ-j5LgyxFNgQWlAqYNAiBiWUcMtraFhBvLA
 
-@refresh_token_gp2 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMuNDU2Ljc4OS0wMSIsImlkIjozLCJncnVwbyI6MiwiZXhwIjoxNzc1MzMwNjUwLCJ0eXBlIjoicmVmcmVzaCJ9.x78MNt72Uoaml4NyPk2JlBsBub8iFSpuDkIE5gtGPi8
-
+@refresh_token_LoginAuditoria = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwiaWQiOjIsImdydXBvIjoyLCJleHAiOjE3NzYyNTc2ODMsInR5cGUiOiJyZWZyZXNoIn0.Jq1zrd2KTybn-gRDzmNhZ2sp26y6lo6Ht_h7B31pZM8
 ### testar access token para acessar endpoint protegido
 GET http://127.0.0.1:8000/auth/me HTTP/1.1
-Authorization: Bearer {{access_token_admin}}
+Authorization: Bearer {{access_token_LoginAuditoria}}
 
 ### Usar refresh token para obter novos tokens
 POST http://localhost:8000/auth/refresh
 Content-Type: application/json
 
 {
-"refresh_token": "{{refresh_token_admin}}"
+    "refresh_token": "{{refresh_token_admin}}"
 }
 
 # access novo do admin: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzQ3MjYwNDYsInR5cGUiOiJhY2Nlc3MifQ.VNUr7vgosrll9c3paBDJslFL-pwEu1eQUzmeQ4QH_N8

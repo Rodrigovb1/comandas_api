@@ -1,28 +1,29 @@
 # Aluno: Rodrigo Vaisam Bastos
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
-# Import das classes relacionadas com aos schemas e persistência dos dados
+from slowapi.errors import RateLimitExceeded
 
 # Domain Schemas
-from domain.schemas.ClienteSchema import ClienteCreate, ClienteUpdate, ClienteResponse
-
-# Auth do funcionário para validar o acesso aos endpoints de cliente
 from domain.schemas.AuthSchema import FuncionarioAuth
+from domain.schemas.ClienteSchema import ClienteCreate, ClienteUpdate, ClienteResponse
 
 # Infra ORM, Database
 from infra.orm.ClienteModel import ClienteDB
 from infra.database import get_db
 from infra.dependencies import get_current_active_user, require_group
 
-router = APIRouter()
+# Limiter e AuditoriaService
+from services.AuditoriaService import AuditoriaService
+from infra.rate_limit import limiter, get_rate_limit
 
-# Criar as rotas/endpoints: GET, POST, PUT, DELETE
+router = APIRouter()
 
 # Novo get_cliente com ORM
 @router.get("/cliente/", response_model=List[ClienteResponse], tags=["Cliente"], status_code=status.HTTP_200_OK)
+@limiter.limit(get_rate_limit("moderate")) # o tempo em minutos do moderate é: 100min
 async def get_clientes(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(get_current_active_user)
 ):
@@ -30,6 +31,8 @@ async def get_clientes(
     try:
         clientes = db.query(ClienteDB).all()
         return clientes
+    except RateLimitExceeded:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -39,6 +42,7 @@ async def get_clientes(
 # Novo get_cliente{id} com ORM, protegida
 @router.get("/cliente/{id}", response_model=ClienteResponse, tags=["Cliente"], status_code=status.HTTP_200_OK)
 async def get_cliente(
+    request: Request,
     id: int,
     db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(get_current_active_user) # get_current_active_user -> protegida.
@@ -60,7 +64,9 @@ async def get_cliente(
 
 # Novo post_cliente com ORM
 @router.post("/cliente/", response_model=ClienteResponse, tags=["Cliente"], status_code=status.HTTP_201_CREATED)
+@limiter.limit(get_rate_limit("restrictive")) # o tempo em minutos do restrictive é: 20min
 async def post_cliente(
+    request: Request,
     cliente_data: ClienteCreate,
     db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1, 3])) # Somente gerentes e caixa podem criar clientes.
@@ -87,8 +93,23 @@ async def post_cliente(
         db.commit()
         db.refresh(novo_cliente) # Lembrando, o reload já faz o trabalho do refresh, mas deixa ai kk
 
+        # Depois de tudo executado e antes do return, registra a ação na auditoria
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=current_user.id,
+            acao="CREATE",
+            recurso="CLIENTE",
+            recurso_id=novo_cliente.id,
+            dados_antigos=None,
+            dados_novos=novo_cliente,
+            request=request
+        )
+
         return novo_cliente
     
+    except RateLimitExceeded:
+    # Propagar a exceção original para o handler personalizado
+        raise
     except Exception:
         raise
     except Exception as e:
@@ -100,7 +121,9 @@ async def post_cliente(
 
 # Novo put_cliente{id} com ORM
 @router.put("/cliente/{id}", response_model=ClienteResponse, tags=["Cliente"], status_code=status.HTTP_200_OK)
+@limiter.limit(get_rate_limit("restrictive")) # o tempo em minutos do restrictive é: 20min
 async def put_cliente(
+    request: Request,
     id: int,
     cliente_data: ClienteUpdate,
     db: Session = Depends(get_db),
@@ -128,9 +151,16 @@ async def put_cliente(
                     detail="Já existe um cliente com este CPF"
                 )
             
+            # Armazena uma cópia do objeto com os dados atuais, para salvar na auditoria
+            # Não pode manter referência com funcionário, pare que o auditoria possa comparar
+            # Por isso a cópia do __dict__
+            dados_antigos_obj = cliente.__dict__.copy()
+            
         # atualiza apenas os campos fornecidos, ou seja, que não são None
         update_data = cliente_data.model_dump(exclude_unset=True)
         # model_dump é um método do Pydantic que converte o modelo em um dicionário, e o exclude_unset=True faz com que ele exclua os campos que não foram fornecidos na requisição, ou seja, que são None.
+
+        dados_antigos_obj = cliente.__dict__.copy()
 
         for field, value in update_data.items():
             setattr(cliente, field, value) # Atualiza os campos do cliente com os dados fornecidos
@@ -138,6 +168,17 @@ async def put_cliente(
 
         db.commit()
         db.refresh(cliente) # Lembrando, o reload já faz o trabalho do refresh, mas deixa ai kk
+
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=current_user.id,
+            acao="UPDATE",
+            recurso="CLIENTE",
+            recurso_id=cliente.id,
+            dados_antigos=dados_antigos_obj,
+            dados_novos=cliente,
+            request=request
+        )
 
         return cliente
     
@@ -151,12 +192,10 @@ async def put_cliente(
             detail=f"Erro ao atualizar cliente: {str(e)}"
         )
 
-# @router.delete("/cliente/{id}", tags=["Cliente"], status_code=200)
-# async def delete_cliente(id: int, db: Session = Depends(get_db)):
-#     return {"msg": "cliente delete executado", "id":id}
-
 @router.delete("/cliente/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Cliente"], summary="Remover cliente")
+@limiter.limit(get_rate_limit("critical")) # o tempo em minutos do critical é: 5min
 async def delete_cliente(
+    request: Request,
     id: int,
     db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1])) # Somente gerentes podem excluir clientes.
@@ -174,11 +213,25 @@ async def delete_cliente(
         db.delete(cliente)
         db.commit()
 
+        # Depois de tudo executado e antes do return, registra a ação na auditoria
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=current_user.id,
+            acao="DELETE",
+            recurso="CLIENTE",
+            recurso_id=cliente.id,
+            dados_antigos=cliente,
+            dados_novos=None,
+            request=request
+        )
+
         return None # Pesquisar no chat, do por quê retornar None, ja que antes ele tinha feito "return produto".
         # Resposta: O código HTTP 204 significa literalmente "No Content" (Sem Conteúdo).
         # A especificação do protocolo HTTP diz que, quando um servidor responde com 204,
         # ele é terminantemente proibido de enviar um corpo na resposta (body)
 
+    except RateLimitExceeded:
+        raise
     except HTTPException:
         raise
     except Exception as e:
@@ -187,5 +240,3 @@ async def delete_cliente(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao excluir cliente: {str(e)}"
         )
-
-# commit: Coloca async antes dos def

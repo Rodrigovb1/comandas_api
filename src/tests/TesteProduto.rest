@@ -1,6 +1,6 @@
 # Aluno: Rodrigo Vaisam Bastos
 
-@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzQ3MjYwNDYsInR5cGUiOiJhY2Nlc3MifQ.VNUr7vgosrll9c3paBDJslFL-pwEu1eQUzmeQ4QH_N8
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzU1ODYxMjAsInR5cGUiOiJhY2Nlc3MifQ.myOwNNqnTBSuxoDcVpAuCWyhyYBLl7e498tp4Q_1DwU
 
 ### Verbo GET – listar todos
 GET http://localhost:8000/produto/ HTTP/1.1

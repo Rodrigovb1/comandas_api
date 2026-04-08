@@ -1,35 +1,28 @@
 # Aluno: Rodrigo Vaisam Bastos
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 from typing import List
-# Import das classes relacionadas com aos schemas e persistência dos dados
 
-# Domain Schemas
-from domain.schemas.FuncionarioSchema import (
-    FuncionarioCreate,
-    FuncionarioUpdate,
-    FuncionarioResponse
-)
-from domain.schemas.AuthSchema import FuncionarioAuth
-
-# Infra ORM, Database
+# Infra ORM, Database, Auth
 from infra.orm.FuncionarioModel import FuncionarioDB
 from infra.database import get_db
 from infra.security import get_password_hash
 from infra.dependencies import get_current_active_user, require_group
+from domain.schemas.AuthSchema import FuncionarioAuth
+from domain.schemas.FuncionarioSchema import FuncionarioCreate, FuncionarioUpdate, FuncionarioResponse
+
+# Limiter e AuditoriaService
+from services.AuditoriaService import AuditoriaService
+from infra.rate_limit import limiter, get_rate_limit
 
 # Ajustes nas rotas para inclusão dos comandas ORM
 router = APIRouter()
 
-# Criar as rotas/endpoints: GET, POST, PUT, DELETE
-
-# @router.get("/funcionario/", tags=["Funcionário"], status_code=200)
-# async def get_funcionario():
-#     return {"msg": "funcionario get todos executado"}
-
-@router.get("/funcionario/", response_model=List[FuncionarioResponse], tags=["Funcionário"], status_code=status.HTTP_200_OK)
+@router.get("/funcionario/", response_model=List[FuncionarioResponse], tags=["Funcionário"], status_code=status.HTTP_200_OK, summary="Listar funcionários - protegida por autenticação e grupo")
+@limiter.limit(get_rate_limit("moderate")) # o tempo em minutos do moderate é: 100min
 async def get_funcionarios(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
     ):
@@ -71,15 +64,13 @@ async def get_funcionario(
             detail=f"Erro ao buscar funcionário: {str(e)}"
         )
 
-# @router.post("/funcionario/", tags=["Funcionário"], status_code=200)
-# async def post_funcionario(corpo: FuncionarioCreate): # Recebe um objeto do tipo FuncionarioCreate no corpo da requisição
-#     return {"msg": "funcionario post executado", "nome": corpo.nome, "cpf": corpo.cpf, "telefone": corpo.telefone}
-
 # • O verbo post será utilizado para criar um novo funcionário.
 # • Conforme já vimos anteriormente, a entrada dos dados será realizada através de um JSON enviado no corpo da requisição,
 # sendo passada para dentro da nossa classe através da classe FuncionarioCreate, herdando de BaseModel.
 @router.post("/funcionario/", response_model=FuncionarioResponse, tags=["Funcionário"], status_code=status.HTTP_201_CREATED)
+@limiter.limit(get_rate_limit("restrictive")) # o tempo em minutos do restrictive é: 20min
 async def post_funcionario(
+    request: Request,
     funcionario_data: FuncionarioCreate,
     db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
@@ -93,6 +84,14 @@ async def post_funcionario(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Já existe um funcionário com este CPF"
+            )
+        
+        # O banco também tem uma restrição UNIQUE para a matrícula, precisamos verificar
+        existing_matricula = db.query(FuncionarioDB).filter(FuncionarioDB.matricula == funcionario_data.matricula).first()
+        if existing_matricula:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Já existe um funcionário com esta matrícula"
             )
         
         # Hash de senha
@@ -114,6 +113,18 @@ async def post_funcionario(
         db.commit()
         db.refresh(novo_funcionario) # Não precisa, pois o reload já ta fazendo isso, mas deixa ai kk
 
+        # Depois de tudo executado, e antes do return, registra a ação na auditoria
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=current_user.id,
+            acao="CREATE",
+            recurso="funcionario",
+            recurso_id=novo_funcionario.id,
+            dados_antigos=None, # None, pois não existe um estado anterior do funcionário, já que ele está sendo criado agora
+            dados_novos=novo_funcionario, # Objeto SQLAlchemy, com dados novos
+            request=request # Request completo para capturar IP e user agent, mesmo que seja um endpoint protegido por autenticação, pois o request ainda é necessário para pegar esses dados de contexto do cliente
+        )
+
         return novo_funcionario
     
     except HTTPException:
@@ -125,13 +136,11 @@ async def post_funcionario(
             detail=f"Erro ao criar funcionário: {str(e)}"
         )
 
-# @router.put("/funcionario/{id}", tags=["Funcionário"], status_code=200)
-# async def put_funcionario(id: int, corpo: FuncionarioCreate):
-#     return {"msg": "funcionario put executado", "nome": corpo.nome, "cpf": corpo.cpf, "telefone": corpo.telefone} # Só 3 parâmetros pois é só pra testar leitura
-
 # Mesma coisa do post, a diferença aqui é que tem que especificar o id.
 @router.put("/funcionario/{id}", response_model=FuncionarioResponse, tags=["Funcionário"], status_code=status.HTTP_200_OK)
+@limiter.limit(get_rate_limit("restrictive")) # o tempo em minutos do restrictive é: 20min
 async def put_funcionario(
+    request: Request,
     id: int, funcionario_data: FuncionarioUpdate,
     db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
@@ -159,15 +168,27 @@ async def put_funcionario(
         # Hash de senha, caso a senha for alterada
         if funcionario_data.senha:
             funcionario_data.senha = get_password_hash(funcionario_data.senha)
-        # Os if de python usam um conceito chamado Truthy e Falsy, ou seja, eles avaliam o valor da variável como verdadeiro ou falso.
+        # Os if de python usam um conceito chamado Truthy e Falsy
         # Falsy: None, False, 0, 0.0, '', [], {}, set()
         # Truthy: Qualquer coisa que contenha algum dado. Exemplos: "senha123", 1, [1, 2], True.
         
-        # Nesse caso, se a senha for fornecida (Não None, não vazia) o if será executado.
-        # Se a senha não for fornecida, o if é ignorado, e a senha do funcionário permanecerá inalterada.
+        # Se a senha não for fornecida (None, vazia), o if é ignorado, e a senha do funcionário permanecerá inalterada.
 
         # Isso permite que o endpoint de atualização funcione tanto para atualizações parciais (onde apenas alguns campos são fornecidos)
         # quanto para atualizações completas (onde todos os campos são fornecidos).
+
+        # Se informado grupo, valida se é um grupo permitido (1, 2 ou 3)
+        if funcionario_data.grupo:
+            if funcionario_data.grupo not in [1, 2, 3]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Grupo deve ser 1 (Admin), 2 (Atendimento Balcão) ou 3 (Atendimento Caixa)"
+                )
+
+        # Armazena uma cópia dos dados antigos do funcionário, antes de atualizar, para fins de auditoria
+        # Não pode manter referência com funcionário, para que a auditoria possa comparar
+        # Por isso a cópia do __dict__
+        dados_antigos_obj = funcionario.__dict__.copy() # Cópia rasa do dicionário de atributos do funcionário, para manter os dados antigos antes da atualização
 
         # Atualiza apenas os campos fornecidos
         update_data = funcionario_data.model_dump(exclude_unset=True)
@@ -177,6 +198,18 @@ async def put_funcionario(
 
         db.commit()
         db.refresh(funcionario)
+
+        # Depois de tudo executado, e antes do return, registra a ação na auditoria
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=current_user.id,
+            acao="UPDATE",
+            recurso="funcionario",
+            recurso_id=funcionario.id,
+            dados_antigos=dados_antigos_obj, # Dicionário com os dados antigos do funcionário, antes da atualização
+            dados_novos=funcionario, # Objeto SQLAlchemy atualizado, com os dados novos do funcionário
+            request=request # Request completo para capturar IP e user agent, mesmo que seja um endpoint protegido por autenticação, pois o request ainda é necessário para pegar esses dados de contexto do cliente
+        )
 
         return funcionario
     
@@ -189,12 +222,10 @@ async def put_funcionario(
             detail=f"Erro ao atualizar funcionário: {str(e)}"
         )
 
-# @router.delete("/funcionario/{id}", tags=["Funcionário"], status_code=200)
-# async def delete_funcionario(id: int):
-#     return {"msg": "funcionario delete executado", "id":id}
-
-@router.delete("/funcionario/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Funcionário"], summary="Remover funcionário")
+@router.delete("/funcionario/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Funcionário"], summary="Remover funcionário - protegida por autenticação e grupo 1")
+@limiter.limit(get_rate_limit("critical")) # o tempo em minutos do critical é: 5min
 async def delete_funcionario(
+    request: Request,
     id: int,
     db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
@@ -211,6 +242,18 @@ async def delete_funcionario(
 
         db.delete(funcionario)
         db.commit()
+
+        # Depois de tudo executado, e antes do return, registra a ação na auditoria
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=current_user.id,
+            acao="DELETE",
+            recurso="FUNCIONARIO",
+            recurso_id=funcionario.id,
+            dados_antigos=funcionario,
+            dados_novos=None,
+            request=request
+        )
 
         return None # Pesquisar no chat, do por quê retornar None, ja que antes ele tinha feito "return funcionario".
         # Resposta: O código HTTP 204 significa literalmente "No Content" (Sem Conteúdo).
