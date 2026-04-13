@@ -1,15 +1,22 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from settings import STR_DATABASE
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from settings import STR_DATABASE, ASYNC_STR_DATABASE
 from sqlalchemy.orm import Session
 
 # cria o engine do banco de dados
 engine = create_engine(STR_DATABASE, echo=True)
 # OBS: Se incluirmos o argumento echo=True, passaremos a ver no terminal os comandos SQL gerados pelo framework, algo que pode ser útil para depuração.
 
-# cria a sessão do banco de dados
+# cria o engine assíncrono do banco de dados
+async_engine = create_async_engine(ASYNC_STR_DATABASE, echo=True)
+
+# cria a sessão síncrona do banco de dados (mantida para compatibilidade com rotas síncronas)
 Session = sessionmaker(bind=engine, autocommit=False, autoflush=True)
+
+AsyncSessionLocal = async_sessionmaker(
+    bind=async_engine, class_=AsyncSession, expire_on_commit=False)
 
 # para trabalhar com tabelas
 Base = declarative_base()
@@ -27,3 +34,14 @@ def get_db():
         yield db_session
     finally:
         db_session.close()
+
+# dependência para injetar a sessão assíncrona do banco de dados nas rotas
+async def get_async_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        # except Exception as e:
+        #     await session.rollback()
+        #     raise e
+        finally:
+            await session.close()

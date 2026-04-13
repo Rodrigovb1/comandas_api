@@ -1,23 +1,15 @@
 ### Login para obter access e refresh tokens
-# POST http://127.0.0.1:8000/auth/login HTTP/1.1
-# content-type: application/json
-
-# {
-#     "cpf" : "1",
-#     "senha" : "abcBolinhas"
-# }
-
 POST http://127.0.0.1:8000/auth/login HTTP/1.1
 content-type: application/json
 
 {
-    "cpf" : "2",
-    "senha" : "22"
+    "cpf" : "1",
+    "senha" : "abcBolinhas"
 }
 
 ### token gerado
-@access_token_admin = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzU2NTM4ODgsInR5cGUiOiJhY2Nlc3MifQ.h17J2yp-PuDR-rWwYSYoXqiet7BK_gWfVCKW8R-UGj0
-@refresh_token_admin = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzYyNTc3ODgsInR5cGUiOiJyZWZyZXNoIn0.rkQZj2Ym4dUfTQ31fmDidjpbZfeJPxDMcfV1WZBkjuk
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzYxMjMyMjAsInR5cGUiOiJhY2Nlc3MifQ.AMhuC5hMStQ06ZLuj3ic1K4TEDi4qcypao-0cEJWIT8
+@refresh_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzY2OTIwMjAsInR5cGUiOiJyZWZyZXNoIn0.Ul2ldF-AyQSHSQaCxy9lV9MUv69HdqyzSWDIeRQoElw
 
 @access_token_LoginAuditoria = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwiaWQiOjIsImdydXBvIjoyLCJleHAiOjE3NzU2NTM3ODMsInR5cGUiOiJhY2Nlc3MifQ.XFux4A8PZ-j5LgyxFNgQWlAqYNAiBiWUcMtraFhBvLA
 
@@ -31,7 +23,7 @@ POST http://localhost:8000/auth/refresh
 Content-Type: application/json
 
 {
-    "refresh_token": "{{refresh_token_admin}}"
+    "refresh_token": "{{refresh_token}}"
 }
 
 # access novo do admin: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzQ3MjYwNDYsInR5cGUiOiJhY2Nlc3MifQ.VNUr7vgosrll9c3paBDJslFL-pwEu1eQUzmeQ4QH_N8

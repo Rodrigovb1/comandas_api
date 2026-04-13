@@ -1,6 +1,6 @@
 # Aluno: Rodrigo Vaisam Bastos
 
-@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzU1ODYxMjAsInR5cGUiOiJhY2Nlc3MifQ.myOwNNqnTBSuxoDcVpAuCWyhyYBLl7e498tp4Q_1DwU
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImdydXBvIjoxLCJleHAiOjE3NzYwNDI5MDksInR5cGUiOiJhY2Nlc3MifQ.7rpjFhw1TI7-LuII76nh90o_0yM-fpmgNnFWT9TfWLE
 
 ### Verbo GET – listar todos
 GET http://localhost:8000/produto/ HTTP/1.1
@@ -10,29 +10,42 @@ Authorization: Bearer {{access_token}}
 GET http://localhost:8000/produto/6 HTTP/1.1
 Authorization: Bearer {{access_token}}
 
-### Verbo POST – adicionar outro
+### Verbo POST
 POST http://127.0.0.1:8000/produto/ HTTP/1.1
 Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-    "nome": "Produto Teste5",
-    "descricao": "teste5",
+    "nome": "Pastel de Carne",
+    "descricao": "Melhor pastel",
     "foto": "bytes",
-    "valor_unitario": 19.99
+    "valor_unitario": 8.99
 }
 
-### Verbo POST – adicionar o nome do aluno
+### Verbo POST
 POST http://127.0.0.1:8000/produto/ HTTP/1.1
 Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 
 {
-    "nome": "Rodrigo Vaisam Bastos",
-    "descricao": "70% Água, contém carne e ossos... pera, Rodrigo é um produto? k",
+    "nome": "Coxinha de Frango",
+    "descricao": "Não gosto, mas é muito bom",
     "foto": "bytes",
-    "valor_unitario": 0.99
+    "valor_unitario": 4.99
+}
+
+### Verbo POST
+POST http://127.0.0.1:8000/produto/ HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+
+{
+    "nome": "Pastel Assado",
+    "descricao": "Ou é muito bom, ou é muito ruim",
+    "foto": "bytes",
+    "valor_unitario": 8.99
 }
 
 ### Verbo PUT – atualiza cod 6
