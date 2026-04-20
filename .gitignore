@@ -11,3 +11,4 @@ pyvenv.cfg
 .vscode
 comandas_db.db
 .env*
+cert/*
